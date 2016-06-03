@@ -27,7 +27,8 @@ class EntryListTableViewController: UITableViewController, UISearchResultsUpdati
     
     func setUpSearchController() {
         
-        let resultsController = UIStoryboard(name: "Main", bundle: nil).instantiateViewControllerWithIdentifier("ResultsController")
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        let resultsController = storyboard.instantiateViewControllerWithIdentifier(String(EntryResultsTableViewController))
         
         searchController = UISearchController(searchResultsController: resultsController)
         searchController.searchResultsUpdater = self
@@ -35,19 +36,16 @@ class EntryListTableViewController: UITableViewController, UISearchResultsUpdati
         searchController.hidesNavigationBarDuringPresentation = false
         tableView.tableHeaderView = searchController.searchBar
         
-        definesPresentationContext = true
+        definesPresentationContext = false
     }
     
     func updateSearchResultsForSearchController(searchController: UISearchController) {
         
-        let searchTerm = searchController.searchBar.text!.lowercaseString
+        let searchTerm = searchController.searchBar.text
         
-        let resultsController = searchController.searchResultsController as? EntryResultsTableViewController
+        guard let resultsController = searchController.searchResultsController as? EntryResultsTableViewController else { return }
         
-        if let resultsController = resultsController {
-            resultsController.filteredEntries = EntryController.sharedController.entries.filter({$0.title.lowercaseString.containsString(searchTerm)})
-            resultsController.tableView.reloadData()
-        }
+        resultsController.update(with: searchTerm)
     }
     
     // MARK: - Table view data source
@@ -84,16 +82,15 @@ class EntryListTableViewController: UITableViewController, UISearchResultsUpdati
         if segue.identifier == "toShowEntry" {
             let sender = sender as! UITableViewCell
             
-            var selectedEntry: Entry
+            let selectedEntry: Entry
             
             // if we get an indexPath from the search results controller, use filteredEntries
             // else, use EntryController
             
             if let indexPath = (searchController.searchResultsController as? EntryResultsTableViewController)?.tableView.indexPathForCell(sender) {
                 
-                let filteredEntries = (searchController.searchResultsController as! EntryResultsTableViewController).filteredEntries
-                
-                selectedEntry = filteredEntries[indexPath.row]
+                guard let resultsController = searchController.searchResultsController as? EntryResultsTableViewController else { fatalError() }
+                selectedEntry = resultsController.getEntry(at: indexPath)
             } else {
                 
                 let indexPath = tableView.indexPathForCell(sender)!
